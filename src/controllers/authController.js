@@ -2,7 +2,7 @@ import User from '../models/User.js';
 import { sendTokenResponse } from '../utils/helpers.js';
 
 // POST /api/auth/login
-export const login = async (req, res, next) => {
+export const login = async (req, res, next) => { 
   try {
     const { email, password } = req.body;
 

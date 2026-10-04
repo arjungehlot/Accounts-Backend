@@ -15,6 +15,8 @@ import expenseRoutes   from './routes/expenses.js';
 import itemRoutes      from './routes/items.js';
 import settingsRoutes  from './routes/settings.js';
 import dashboardRoutes from './routes/dashboard.js';
+import projectRoutes  from './routes/projects.js';
+import reportsRoutes  from './routes/reports.js';
 
 // Connect to MongoDB
 await connectDB();
@@ -41,6 +43,8 @@ app.use('/api/expenses',  expenseRoutes);
 app.use('/api/items',     itemRoutes);
 app.use('/api/settings',  settingsRoutes);
 app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/projects',  projectRoutes);
+app.use('/api/reports',   reportsRoutes);
 
 // ─── Health check ─────────────────────────────────────────────────────────────
 app.get('/api/health', (req, res) => {

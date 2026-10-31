@@ -8,7 +8,7 @@ const itemMasterSchema = new mongoose.Schema(
     description: { type: String, default: '' },
     rate:        { type: Number, required: true, min: 0 },
     tax:         { type: Number, default: 18, min: 0 },
-    unit:        { type: String, enum: ['Monthly', 'Annual', 'Project', 'Service', 'Per Unit', 'Hourly'], default: 'Monthly' },
+    unit:        { type: String, enum: ['Monthly', 'Annual', 'Project', 'Service', 'Per Unit', 'Hourly', 'License', 'User', 'Module'], default: 'Monthly' },
     isActive:    { type: Boolean, default: true },
   },
   { timestamps: true }

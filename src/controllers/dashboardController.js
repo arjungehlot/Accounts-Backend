@@ -3,6 +3,7 @@ import Payment from '../models/Payment.js';
 import Expense from '../models/Expense.js';
 import Client from '../models/Client.js';
 import Activity from '../models/Activity.js';
+import Quotation from '../models/Quotation.js';
 import { format, startOfMonth, endOfMonth, subMonths } from 'date-fns';
 
 // GET /api/dashboard
@@ -11,18 +12,22 @@ export const getDashboard = async (req, res, next) => {
     const today     = new Date().toISOString().slice(0, 10);
     const thisMonth = format(new Date(), 'yyyy-MM');
 
-    const [allInvoices, allPayments, allExpenses, allClients] = await Promise.all([
+    const [allInvoices, allPayments, allExpenses, allClients, allQuotations] = await Promise.all([
       Invoice.find({ status: { $ne: 'cancelled' } }).lean(),
       Payment.find().lean(),
       Expense.find().lean(),
       Client.find().lean(),
+      Quotation.find().select('-data').populate('clientId', 'clientName companyName').sort({ createdAt: -1 }).lean(),
     ]);
 
     // Totals
     const totalInvoiced  = allInvoices.reduce((s, i) => s + (i.grandTotal || 0), 0);
     const totalReceived  = allPayments.reduce((s, p) => s + (p.amount || 0), 0);
     const totalExpenses  = allExpenses.reduce((s, e) => s + (e.amount || 0), 0);
-    const outstanding    = Math.max(0, totalInvoiced - totalReceived);
+    const paidFor        = (id) => allPayments.filter(p => p.invoiceId?.toString() === id.toString()).reduce((s, p) => s + (p.amount || 0), 0);
+    const outstanding    = allInvoices
+      .filter(inv => inv.status !== 'draft')
+      .reduce((s, inv) => s + Math.max(0, (inv.grandTotal || 0) - paidFor(inv._id)), 0);
     const netIncome      = totalReceived - totalExpenses;
 
     // Overdue
@@ -48,8 +53,8 @@ export const getDashboard = async (req, res, next) => {
       let status = inv.status;
       if (status !== 'cancelled' && status !== 'draft') {
         if (paid >= inv.grandTotal) status = 'paid';
-        else if (paid > 0) status = 'partial';
         else if (inv.dueDate && inv.dueDate < today) status = 'overdue';
+        else if (paid > 0) status = 'partial';
         else status = 'sent';
       }
       statusCounts[status] = (statusCounts[status] || 0) + 1;
@@ -81,6 +86,21 @@ export const getDashboard = async (req, res, next) => {
         return { clientId, name: client?.clientName || 'Unknown', company: client?.companyName || '', amount };
       });
 
+    // Quotation pipeline
+    const qStatus = (q) => ((q.status === 'draft' || q.status === 'sent') && q.validUntil && q.validUntil < today) ? 'expired' : q.status;
+    const quotationStats = { total: allQuotations.length, draft: 0, sent: 0, accepted: 0, rejected: 0, expired: 0, converted: 0, totalValue: 0, openValue: 0, wonValue: 0 };
+    allQuotations.forEach(q => {
+      const st = qStatus(q);
+      quotationStats[st] = (quotationStats[st] || 0) + 1;
+      quotationStats.totalValue += q.grandTotal || 0;
+      if (st === 'draft' || st === 'sent') quotationStats.openValue += q.grandTotal || 0;
+      if (st === 'accepted' || st === 'converted') quotationStats.wonValue += q.grandTotal || 0;
+    });
+    const recentQuotations = allQuotations.slice(0, 5).map(q => ({
+      _id: q._id, quotNo: q.quotNo, title: q.title, grandTotal: q.grandTotal, status: qStatus(q),
+      clientName: q.clientId?.clientName || '', createdBy: q.createdBy?.name || '', createdAt: q.createdAt,
+    }));
+
     // Recent activity
     const recentActivity = await Activity.find().sort({ createdAt: -1 }).limit(20).lean();
 
@@ -111,6 +131,8 @@ export const getDashboard = async (req, res, next) => {
           expenses: allExpenses.length,
           statusCounts,
         },
+        quotationStats,
+        recentQuotations,
         monthlyData,
         topClients,
         recentActivity,

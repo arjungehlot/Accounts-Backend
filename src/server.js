@@ -17,6 +17,7 @@ import settingsRoutes  from './routes/settings.js';
 import dashboardRoutes from './routes/dashboard.js';
 import projectRoutes  from './routes/projects.js';
 import reportsRoutes  from './routes/reports.js';
+import quotationRoutes from './routes/quotations.js';
 
 // Connect to MongoDB
 await connectDB();
@@ -45,6 +46,7 @@ app.use('/api/settings',  settingsRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/projects',  projectRoutes);
 app.use('/api/reports',   reportsRoutes);
+app.use('/api/quotations', quotationRoutes);
 
 // ─── Health check ─────────────────────────────────────────────────────────────
 app.get('/api/health', (req, res) => {

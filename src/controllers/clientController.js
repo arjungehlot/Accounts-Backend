@@ -2,6 +2,7 @@ import Client from '../models/Client.js';
 import Invoice from '../models/Invoice.js';
 import Payment from '../models/Payment.js';
 import Activity from '../models/Activity.js';
+import Quotation from '../models/Quotation.js';
 
 // GET /api/clients
 export const getClients = async (req, res, next) => {
@@ -83,6 +84,16 @@ export const updateClient = async (req, res, next) => {
 // DELETE /api/clients/:id
 export const deleteClient = async (req, res, next) => {
   try {
+    const [invCount, quoCount] = await Promise.all([
+      Invoice.countDocuments({ clientId: req.params.id }),
+      Quotation.countDocuments({ clientId: req.params.id }),
+    ]);
+    if (invCount || quoCount) {
+      return res.status(409).json({
+        success: false,
+        message: `Cannot delete — client has ${invCount} invoice(s) and ${quoCount} quotation(s). Remove those first or mark the client inactive.`,
+      });
+    }
     const client = await Client.findByIdAndDelete(req.params.id);
     if (!client) return res.status(404).json({ success: false, message: 'Client not found' });
     res.json({ success: true, message: 'Client deleted' });

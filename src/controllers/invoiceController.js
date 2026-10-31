@@ -3,6 +3,7 @@ import Payment from '../models/Payment.js';
 import Client from '../models/Client.js';
 import Activity from '../models/Activity.js';
 import { generateInvoiceNumber } from '../utils/helpers.js';
+import { unlinkInvoiceFromQuotation } from './quotationController.js';
 
 // GET /api/invoices
 export const getInvoices = async (req, res, next) => {
@@ -33,8 +34,8 @@ export const getInvoices = async (req, res, next) => {
         let computedStatus = inv.status;
         if (inv.status !== 'cancelled' && inv.status !== 'draft') {
           if (paid >= inv.grandTotal) computedStatus = 'paid';
-          else if (paid > 0) computedStatus = 'partial';
           else if (inv.dueDate && inv.dueDate < today) computedStatus = 'overdue';
+          else if (paid > 0) computedStatus = 'partial';
           else computedStatus = 'sent';
         }
 
@@ -133,6 +134,9 @@ export const deleteInvoice = async (req, res, next) => {
 
     // Also delete related payments
     await Payment.deleteMany({ invoiceId: req.params.id });
+
+    // Free the quotation (or milestone) this invoice was generated from
+    await unlinkInvoiceFromQuotation(invoice);
 
     res.json({ success: true, message: 'Invoice and related payments deleted' });
   } catch (error) {

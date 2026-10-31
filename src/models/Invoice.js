@@ -27,6 +27,9 @@ const invoiceSchema = new mongoose.Schema(
     status:        { type: String, enum: ['draft', 'sent', 'partial', 'paid', 'overdue', 'cancelled'], default: 'sent' },
     notes:         { type: String, default: '' },
     termsConditions: { type: String, default: '' },
+    // link back to the quotation this invoice was generated from (if any)
+    quotationId:     { type: mongoose.Schema.Types.ObjectId, ref: 'Quotation', default: null },
+    quotationNumber: { type: String, default: '' },
   },
   { timestamps: true }
 );

@@ -18,6 +18,10 @@ const clientSchema = new mongoose.Schema(
     industry:       { type: String, default: '' },
     notes:          { type: String, default: '' },
     status:         { type: String, enum: ['active', 'inactive'], default: 'active' },
+    // public read-only payment statement link (/#/share/<token>)
+    shareToken:     { type: String, default: null, index: true, sparse: true },
+    shareEnabled:   { type: Boolean, default: false },
+    shareCreatedAt: { type: Date, default: null },
   },
   { timestamps: true }
 );

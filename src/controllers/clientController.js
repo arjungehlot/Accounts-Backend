@@ -2,6 +2,7 @@ import Client from '../models/Client.js';
 import Invoice from '../models/Invoice.js';
 import Payment from '../models/Payment.js';
 import Activity from '../models/Activity.js';
+import crypto from 'crypto';
 import Quotation from '../models/Quotation.js';
 
 // GET /api/clients
@@ -97,6 +98,30 @@ export const deleteClient = async (req, res, next) => {
     const client = await Client.findByIdAndDelete(req.params.id);
     if (!client) return res.status(404).json({ success: false, message: 'Client not found' });
     res.json({ success: true, message: 'Client deleted' });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// POST /api/clients/:id/share   body: { action: 'enable' | 'regenerate' | 'disable' }
+// Manages the public read-only payment-statement link of one client.
+export const manageShare = async (req, res, next) => {
+  try {
+    const { action = 'enable' } = req.body || {};
+    const client = await Client.findById(req.params.id);
+    if (!client) return res.status(404).json({ success: false, message: 'Client not found' });
+
+    if (action === 'disable') {
+      client.shareEnabled = false;
+    } else if (action === 'regenerate' || !client.shareToken) {
+      client.shareToken = crypto.randomBytes(24).toString('hex');   // 48 hex chars, unguessable
+      client.shareEnabled = true;
+      client.shareCreatedAt = new Date();
+    } else {
+      client.shareEnabled = true;
+    }
+    await client.save();
+    res.json({ success: true, data: { shareToken: client.shareToken, shareEnabled: client.shareEnabled, shareCreatedAt: client.shareCreatedAt } });
   } catch (error) {
     next(error);
   }

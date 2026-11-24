@@ -49,15 +49,27 @@ export const getClientStatement = async (req, res, next) => {
         subtotal: round(inv.subtotal),
         taxAmount: round(inv.taxAmount),
         total, paid, balance, status,
-        items: (inv.items || []).map((it) => ({
-          item: it.item,
-          description: it.description || '',
-          qty: it.qty,
-          rate: it.rate,
-          discount: it.discount || 0,
-          tax: it.tax || 0,
-          amount: round((it.qty || 0) * (it.rate || 0) * (1 - (it.discount || 0) / 100) * (1 + (it.tax || 0) / 100)),
-        })),
+        grossTotal: round((inv.items || []).reduce((a, it) => a + (it.qty || 0) * (it.rate || 0), 0)),
+        discountTotal: round((inv.items || []).reduce((a, it) => a + (it.qty || 0) * (it.rate || 0) * ((it.discount || 0) / 100), 0)),
+        items: (inv.items || []).map((it) => {
+          const gross = (it.qty || 0) * (it.rate || 0);
+          const discountAmount = gross * ((it.discount || 0) / 100);
+          const taxable = gross - discountAmount;
+          const taxAmount = taxable * ((it.tax || 0) / 100);
+          return {
+            item: it.item,
+            description: it.description || '',
+            qty: it.qty,
+            rate: it.rate,
+            discount: it.discount || 0,
+            tax: it.tax || 0,
+            gross: round(gross),
+            discountAmount: round(discountAmount),
+            taxable: round(taxable),
+            taxAmount: round(taxAmount),
+            amount: round(taxable + taxAmount),
+          };
+        }),
       };
     });
 
